@@ -150,6 +150,11 @@ async fn save_state(db: &State<Db>, match_egg: Json<MatchEgg>) -> Result<Created
     Ok(Created::new("/").body(Json::from(created_match)))
 }
 
+#[get("/")]
+async fn default_get(db: &State<Db>) -> &'static str {
+    "jack trusler"
+}
+
 #[get("/<label>")]
 async fn get_match(db: &State<Db>, label: String) -> Result<Json<Match>> {
     let row = sqlx::query!("SELECT * FROM matches WHERE label=?", label)
@@ -204,7 +209,7 @@ fn rocket() -> _ {
     rocket::build()
         .attach(AdHoc::try_on_ignite("SQLx database", init_db))
         .attach(CORS)
-        .mount("/", routes![save_state, get_match, yes_option])
+        .mount("/", routes![save_state, get_match, yes_option, default_get])
 }
 
 async fn init_db(rocket: Rocket<Build>) -> fairing::Result {
