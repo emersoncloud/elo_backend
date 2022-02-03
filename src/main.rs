@@ -16,24 +16,24 @@ use std::env;
 
 const CHARSET: &[u8] = b"abcdefghijklmnopqrstuvwxyz";
 
-pub struct CORS;
-
-#[rocket::async_trait]
-impl Fairing for CORS {
-    fn info(&self) -> Info {
-        Info {
-            name: "Add CORS headers to responses",
-            kind: Kind::Response
-        }
-    }
-
-    async fn on_response<'r>(&self, _request: &'r Request<'_>, response: &mut Response<'r>) {
-        response.set_header(Header::new("Access-Control-Allow-Origin", "*"));
-        response.set_header(Header::new("Access-Control-Allow-Methods", "POST, GET, PATCH, OPTIONS"));
-        response.set_header(Header::new("Access-Control-Allow-Headers", "*"));
-        response.set_header(Header::new("Access-Control-Allow-Credentials", "true"));
-    }
-}
+// pub struct CORS;
+//
+// #[rocket::async_trait]
+// impl Fairing for CORS {
+//     fn info(&self) -> Info {
+//         Info {
+//             name: "Add CORS headers to responses",
+//             kind: Kind::Response
+//         }
+//     }
+//
+//     async fn on_response<'r>(&self, _request: &'r Request<'_>, response: &mut Response<'r>) {
+//         response.set_header(Header::new("Access-Control-Allow-Origin", "*"));
+//         response.set_header(Header::new("Access-Control-Allow-Methods", "POST, GET, PATCH, OPTIONS"));
+//         response.set_header(Header::new("Access-Control-Allow-Headers", "*"));
+//         response.set_header(Header::new("Access-Control-Allow-Credentials", "true"));
+//     }
+// }
 
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(crate = "rocket::serde")]
@@ -208,7 +208,7 @@ async fn get_match(db: &State<Db>, label: String) -> Result<Json<Match>> {
 fn rocket() -> _ {
     rocket::build()
         .attach(AdHoc::try_on_ignite("SQLx database", init_db))
-        .attach(CORS)
+        // .attach(CORS)
         .mount("/", routes![save_state, get_match, yes_option, default_get])
 }
 
