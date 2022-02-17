@@ -11,6 +11,8 @@ tokio = { version = "1.15.0", features = ["full"] }
 sqlx = { version = "0.5", features = ["mysql", "runtime-tokio-rustls", "macros"] }
 futures = { version = "0.3" }
 rand = "0.6"
+thiserror = "1"
+log="0.4"
 
 [dependencies.rocket]
 version = "0.5.0-rc.1"

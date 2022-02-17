@@ -371,11 +371,13 @@ version = "0.1.0"
 dependencies = [
  "dotenv",
  "futures",
+ "log",
  "rand 0.6.5",
  "rocket 0.5.0-rc.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "rocket_db_pools",
  "rocket_sync_db_pools",
  "sqlx",
+ "thiserror",
  "tokio",
 ]
 
