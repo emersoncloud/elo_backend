@@ -1,6 +1,7 @@
 use crate::base::db::Db;
 use crate::base::errors::ServerError;
 use crate::base::game_state::{Match, MatchEgg, MatchLabel, Player};
+use crate::data::{matches, players, teams};
 
 use rocket::fairing::AdHoc;
 use rocket::response::status::Created;
@@ -22,48 +23,15 @@ pub fn stage() -> AdHoc {
 
 #[get("/<label>")]
 pub async fn get_match(db: &State<Db>, label: String) -> EndpointResult<Json<Match>> {
-    let row: Option<MatchLabel> =
-        sqlx::query_as!(MatchLabel, "SELECT * FROM matches WHERE label=?", label)
-            .fetch_optional(&**db)
-            .await?;
-
+    let row: Option<MatchLabel> = matches::get_match(db, &label).await;
     if row.is_none() {
         error!("Match: \"{}\" not found", label);
         return Err(ServerError::MyError(sqlx::Error::RowNotFound));
     }
 
-    let free_players: Vec<Player> = sqlx::query_as!(
-        Player,
-        "SELECT players.name, players.elo, players.avatar \
-                FROM players \
-                JOIN free_players on free_players.player_id = players.id \
-                WHERE free_players.match_label=?",
-        label
-    )
-    .fetch_all(&**db)
-    .await?;
-
-    let team_1: Vec<Player> = sqlx::query_as!(
-        Player,
-        "SELECT players.name, players.elo, players.avatar \
-                FROM players \
-                JOIN team_1 on team_1.player_id = players.id \
-                WHERE team_1.match_label=?",
-        label
-    )
-    .fetch_all(&**db)
-    .await?;
-
-    let team_2: Vec<Player> = sqlx::query_as!(
-        Player,
-        "SELECT players.name, players.elo, players.avatar \
-                FROM players \
-                JOIN team_2 on team_2.player_id = players.id \
-                WHERE team_2.match_label=?",
-        label
-    )
-    .fetch_all(&**db)
-    .await?;
+    let free_players: Vec<Player> = players::get_free_players(db, &label).await;
+    let team_1: Vec<Player> = teams::get_team_one(db, &label).await;
+    let team_2: Vec<Player> = teams::get_team_two(db, &label).await;
 
     let created_match = Match {
         label,
@@ -89,64 +57,21 @@ pub async fn save_state(
         })
         .collect();
 
-    sqlx::query!("INSERT INTO matches (label) values (?)", label)
-        .execute(&**db)
-        .await?;
+    matches::insert_match(db, label.clone()).await;
 
     for player in match_egg.players.iter() {
-        let players_result: MySqlQueryResult = sqlx::query!(
-            "INSERT INTO players (name, elo, avatar) values (?, ?, ?)",
-            player.name,
-            player.elo,
-            player.avatar
-        )
-        .execute(&**db)
-        .await?;
-
-        sqlx::query!(
-            "INSERT INTO free_players (match_label, player_id) values (?, ?)",
-            label,
-            players_result.last_insert_id()
-        )
-        .execute(&**db)
-        .await?;
+        let players_result: MySqlQueryResult = players::insert_players(db, player.clone()).await;
+        players::insert_free_players(db, label.clone(), players_result.last_insert_id()).await;
     }
-    for player in match_egg.team_1.iter() {
-        let players_result: MySqlQueryResult = sqlx::query!(
-            "INSERT INTO players (name, elo, avatar) values (?, ?, ?)",
-            player.name,
-            player.elo,
-            player.avatar
-        )
-        .execute(&**db)
-        .await?;
 
-        sqlx::query!(
-            "INSERT INTO team_1 (match_label, player_id) values (?, ?)",
-            label,
-            players_result.last_insert_id()
-        )
-        .execute(&**db)
-        .await?;
+    for player in match_egg.team_1.iter() {
+        let players_result: MySqlQueryResult = players::insert_players(db, player.clone()).await;
+        teams::insert_team_one(db, label.clone(), players_result.last_insert_id()).await;
     }
 
     for player in match_egg.team_2.iter() {
-        let players_result: MySqlQueryResult = sqlx::query!(
-            "INSERT INTO  players (name, elo, avatar) values (?, ?, ?)",
-            player.name,
-            player.elo,
-            player.avatar
-        )
-        .execute(&**db)
-        .await?;
-
-        sqlx::query!(
-            "INSERT INTO team_2 (match_label, player_id) values (?, ?)",
-            label,
-            players_result.last_insert_id()
-        )
-        .execute(&**db)
-        .await?;
+        let players_result: MySqlQueryResult = players::insert_players(db, player.clone()).await;
+        teams::insert_team_two(db, label.clone(), players_result.last_insert_id()).await;
     }
 
     let created_match = Match {

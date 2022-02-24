@@ -2,6 +2,7 @@
 extern crate rocket;
 
 mod base;
+mod data;
 mod db_connection;
 mod routes;
 
